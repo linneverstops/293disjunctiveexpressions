@@ -1,0 +1,96 @@
+package lexer;
+
+import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.Optional;
+import java.util.Set;
+
+/**
+ * TungHo Lin
+ * txl429
+ * PA3
+ * Class Lexer
+ */
+
+public class Lexer {
+
+    /* define the tokenPatterns to be the regex of all Types of tokens */
+    private static Pattern tokenPatterns = Pattern.compile("not|and|or|\\(|\\)|[a-z]+|-?[1-9]\\d*|\\+|-|\\*|/|\\s+");
+
+    private final Matcher matcher;
+
+    private int location;
+
+    public Lexer(String input) {
+        this.matcher = tokenPatterns.matcher(input);
+    }
+
+    public static void main(String[] args) throws ParserException {
+        Lexer test = new Lexer("(a COMMENT and \t b) or c");
+        test.printTokens(test.generateTokens());
+    }
+
+    private ArrayList<LocationalToken> generateTokens() throws ParserException {
+        ArrayList<LocationalToken> allTokens = new ArrayList<LocationalToken>();
+        while(hasNext()) {
+            allTokens.add(next());
+        }
+        return allTokens;
+    }
+
+    private void printTokens(ArrayList<LocationalToken> tokens) {
+        if(tokens.isEmpty())
+            System.err.println("No Tokens are found");
+        else {
+            System.out.println("Tokens found:");
+            for (LocationalToken token : tokens)
+                System.out.print(token.getType() + " ");
+        }
+    }
+
+    private Token.Type matchPattern(String input) throws ParserException{
+        for(Token.Type type: Token.Type.values()) {
+            if(Token.checkPattern(type, input)) {
+                return type;
+            }
+        }
+        throw new ParserException(ParserException.ErrorCode.INVALID_TOKEN);
+    }
+
+
+    public boolean hasNext() {
+        return matcher.find();
+    }
+
+    public LocationalToken next() throws ParserException {
+        if(!hasNext())
+            throw new ParserException(ParserException.ErrorCode.TOKEN_EXPECTED);
+        else {
+            String match = matcher.group();
+            int location = matcher.start();
+            Token.Type currentType = matchPattern(match);
+            Token token = Token.of(currentType, match);
+            return new LocationalToken(token, location);
+        }
+    }
+
+    public Optional<LocationalToken> nextValid(Set<Token.Type> validTypes, Set<Token.Type> invalidTypes) throws ParserException {
+        while(hasNext()) {
+            LocationalToken nextToken = next();
+            Token.Type nextTokenType = nextToken.getType();
+            if(validTypes.contains(nextTokenType))
+                return Optional.of(nextToken);
+            else if(invalidTypes.contains(nextTokenType))
+                throw new ParserException(ParserException.ErrorCode.INVALID_TOKEN);
+            else
+            /* a token that is neither valid nor invalid,
+            the method will silently ignore and keep scanning
+            the input for the next token
+             */
+                ;
+        }
+        return Optional.empty();
+    }
+
+}
